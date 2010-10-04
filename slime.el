@@ -5906,15 +5906,18 @@ The details include local variable bindings and CATCH-tags."
                                      'sldb-detailed-frame-line-face))
         (let ((indent1 "      ")
               (indent2 "        "))
-          (insert indent1 (in-sldb-face section
-                            (if locals "Locals:" "[No Locals]")) "\n")
-          (sldb-insert-locals locals indent2 frame)
+          (when locals
+            (insert indent1 (in-sldb-face section "Locals:") "\n")
+            (sldb-insert-locals locals indent2 frame))
           (when catches
             (insert indent1 (in-sldb-face section "Catch-tags:") "\n")
             (dolist (tag catches)
               (slime-propertize-region `(catch-tag ,tag)
                 (insert indent2 (in-sldb-face catch-tag (format "%s" tag))
                         "\n"))))
+          (when (and (not catches)
+                     (not locals))
+            (insert indent1 (in-sldb-face detailed-frame-line "[Nothing here]") "\n"))
           (setq end (point)))))
     (sldb-recenter-region start end)))
 
