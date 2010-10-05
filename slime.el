@@ -6272,12 +6272,19 @@ was called originally."
 (slime-define-keys slime-connection-list-mode-map
   ("d"         'slime-connection-list-make-default)
   ("g"         'slime-update-connection-list)
-  ((kbd "C-k") 'slime-quit-connection-at-point)
-  ("R"         'slime-restart-connection-at-point))
+  ("k"         'slime-disconnect-connection-at-point)
+  ;; you don't want to press these accidentally...
+  ((kbd "C-c C-q") 'slime-quit-connection-at-point)
+  ((kbd "C-c C-r") 'slime-restart-connection-at-point))
 
 (defun slime-connection-at-point ()
   (or (get-text-property (point) 'slime-connection)
       (error "No connection at point")))
+
+(defun slime-disconnect-connection-at-point (connection)
+  (interactive (list (slime-connection-at-point)))
+  (slime-net-close connection)
+  (slime-update-connection-list))
 
 (defun slime-quit-connection-at-point (connection)
   (interactive (list (slime-connection-at-point)))
