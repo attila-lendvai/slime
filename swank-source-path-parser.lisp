@@ -89,18 +89,54 @@ subexpressions of the object to stream positions."
       (push (cons start end) (gethash form source-map)))
     (values form source-map)))
 
+(defun call-with-skipping-toplevel-forms (thunk n stream)
+  (let ((*read-suppress* nil)
+        (*package* *package*)
+        (*readtable* *readtable*))
+    ;; Try to parse in-package forms and alter *readtable* and *package* accordingly.
+    ;; In case of any errors revert to suppressed reading, in the hope that it may
+    ;; yield useful results.
+    (flet ((skip-one ()
+             (let ((form (read stream)))
+               ;; (format *debug-io* "Form ~S~%" form)
+               (when (and (consp form)
+                          (string= (first form) 'in-package)
+                          (second form))
+                 (let ((package (find-package (second form))))
+                   (if package
+                       ;; KLUDGE due to the load order we can't reference the swank package
+                       (let ((readtable (funcall (read-from-string "swank::guess-buffer-readtable")
+                                                 (string-upcase (package-name package)))))
+                         ;; (format *debug-io* "Setting package to ~A, readtable to ~A~%" package readtable)
+                         (setf *package* package)
+                         (setf *readtable* readtable))
+                       (setf *read-suppress* t)))))))
+      (loop :for i :below n :do
+        (block try-skipping
+          (handler-bind ((serious-condition
+                          (lambda (error)
+                            ;; KLUDGE due to the load order we can't reference the swank package
+                            (when (funcall (read-from-string "swank:debug-on-swank-error"))
+                              (invoke-debugger error))
+                            (return-from try-skipping))))
+            (skip-one)))))
+    (funcall thunk)))
+
+(defmacro with-skipping-toplevel-forms ((n stream) &body body)
+  `(call-with-skipping-toplevel-forms (lambda () ,@body) ,n ,stream))
+
 (defun skip-toplevel-forms (n stream)
-  (let ((*read-suppress* t))
-    (dotimes (i n)
-      (read stream))))
+  (with-skipping-toplevel-forms (n stream)
+    ;; TODO kept only for backward compatibility with non-sbcl backends, but it should be eliminated eventually
+    nil))
 
 (defun read-source-form (n stream)
   "Read the Nth toplevel form number with source location recording.
 Return the form and the source-map."
-  (skip-toplevel-forms n stream)
-  (let ((*read-suppress* nil))
-    (read-and-record-source-map stream)))
-  
+  (with-skipping-toplevel-forms (n stream)
+    (let ((*read-suppress* nil))
+      (read-and-record-source-map stream))))
+
 (defun source-path-stream-position (path stream)
   "Search the source-path PATH in STREAM and return its position."
   (check-source-path path)
@@ -125,12 +161,12 @@ Return the form and the source-map."
   (let ((toplevel-number (first path))
 	(buffer))
     (with-open-file (file filename)
-      (skip-toplevel-forms (1+ toplevel-number) file)
-      (let ((endpos (file-position file)))
-	(setq buffer (make-array (list endpos) :element-type 'character
-				 :initial-element #\Space))
-	(assert (file-position file 0))
-	(read-sequence buffer file :end endpos)))
+      (with-skipping-toplevel-forms ((1+ toplevel-number) file)
+        (let ((endpos (file-position file)))
+          (setq buffer (make-array (list endpos) :element-type 'character
+                                   :initial-element #\Space))
+          (assert (file-position file 0))
+          (read-sequence buffer file :end endpos))))
     (source-path-string-position path buffer)))
 
 (defun source-path-source-position (path form source-map)
@@ -142,9 +178,10 @@ of the deepest (i.e. smallest) possible form is returned."
 		     for f = form then (nth n f)
 		     collect f)))
     ;; select the first subform present in source-map
-    (loop for form in (reverse forms)
-	  for positions = (gethash form source-map)
-	  until (and positions (null (cdr positions)))
-	  finally (destructuring-bind ((start . end)) positions
-		    (return (values start end))))))
-
+    (loop
+      :for form :in (reverse forms)
+      :for positions = (gethash form source-map)
+      :while positions
+      :when (null (cdr positions))
+        :return (destructuring-bind ((start . end)) positions
+                  (return (values start end))))))
