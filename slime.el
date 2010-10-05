@@ -364,14 +364,19 @@ PROPERTIES specifies any default face properties."
        :group 'slime-debugger)))
 
 (define-sldb-faces
-  (topline        "the top line describing the error")
-  (condition      "the condition class")
-  (section        "the labels of major sections in the debugger buffer")
-  (frame-label    "backtrace frame numbers")
+  (topline        "the top line describing the error"
+                  '(:foreground "darkred" :bold t))
+  (condition      "the condition class"
+                  '(:bold t))
+  (section        "the labels of major sections in the debugger buffer"
+                  '(:foreground "darkblue" :bold t))
+  (frame-label    "backtrace frame numbers"
+                  '(:foreground "#888"))
   (restart-type   "restart names."
                   (if (slime-face-inheritance-possible-p)
                       '(:inherit font-lock-keyword-face)))
-  (restart        "restart descriptions")
+  (restart        "restart descriptions"
+                  '(:foreground "darkmagenta"))
   (restart-number "restart numbers (correspond to keystrokes to invoke)"
                   '(:bold t))
   (frame-line     "function names and arguments in the backtrace")
@@ -384,7 +389,8 @@ PROPERTIES specifies any default face properties."
    "function names and arguments in a detailed (expanded) frame")
   (local-name     "local variable names")
   (local-value    "local variable values")
-  (catch-tag      "catch tags"))
+  (catch-tag      "catch tags"
+                  '(:foreground "yellow4")))
 
 
 ;;;; Minor modes
