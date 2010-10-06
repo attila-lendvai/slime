@@ -5941,17 +5941,24 @@ The details include local variable bindings and CATCH-tags."
 (defun sldb-insert-locals (vars prefix frame)
   "Insert VARS and add PREFIX at the beginning of each inserted line.
 VAR should be a plist with the keys :name, :id, and :value."
-  (loop for i from 0
-        for var in vars do
-        (destructuring-bind (&key name id value) var
-          (slime-propertize-region (list 'sldb-default-action 'sldb-inspect-var
-                                         'var i)
-            (insert prefix
-                    (in-sldb-face local-name
-                      (concat name (if (zerop id) "" (format "#%d" id))))
-                    " = ")
-            (funcall sldb-insert-frame-variable-value-function value frame i)
-            (insert "\n")))))
+  (let ((max-name-length
+         (loop for var in vars
+               maximize (destructuring-bind (&key name id value) var
+                          (length (concat name (if (zerop id)
+                                                   ""
+                                                   (format "#%d" id))))))))
+    (loop for i from 0
+          for var in vars do
+          (destructuring-bind (&key name id value) var
+            (slime-propertize-region (list 'sldb-default-action 'sldb-inspect-var
+                                           'var i)
+              (let ((name (concat name (if (zerop id) "" (format "#%d" id)))))
+                (insert prefix
+                        (in-sldb-face local-name name)
+                        (make-string (- max-name-length (length name)) ?\ )
+                        " = "))
+              (funcall sldb-insert-frame-variable-value-function value frame i)
+              (insert "\n"))))))
 
 (defun sldb-insert-frame-variable-value (value _frame _index)
   (insert (in-sldb-face local-value value)))
