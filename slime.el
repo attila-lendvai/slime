@@ -6014,19 +6014,19 @@ VAR should be a plist with the keys :name, :id, and :value."
                       (slime-sexp-at-point))))
   (let ((number (sldb-frame-number-at-point)))
     (slime-eval-async `(swank:inspect-in-frame ,string ,number)
-                      'slime-open-inspector)))
+                      (slime-make-inspector-opener))))
 
 (defun sldb-inspect-var ()
   (let ((frame (sldb-frame-number-at-point))
         (var (sldb-var-number-at-point)))
     (slime-eval-async `(swank:inspect-frame-var ,frame ,var) 
-                      'slime-open-inspector)))
+                      (slime-make-inspector-opener))))
 
 (defun sldb-inspect-condition ()
   "Inspect the current debugger condition."
   (interactive)
   (slime-eval-async '(swank:inspect-current-condition)
-                    'slime-open-inspector))
+                    (slime-make-inspector-opener)))
 
 (defun sldb-print-condition ()
   (interactive)
@@ -6570,7 +6570,17 @@ was called originally."
 
 (defvar slime-inspector-insert-ispec-function 'slime-inspector-insert-ispec)
 
-(defun slime-open-inspector (inspected-parts &optional point hook)
+(defun slime-make-inspector-opener (&optional point hook)
+  (lexical-let ((thread slime-current-thread)
+                (package (slime-current-package))
+                (point point)
+                (hook hook))
+    (lambda (thing)
+      (when thing
+        (slime-open-inspector thing point hook thread package)))))
+
+(defun slime-open-inspector (inspected-parts &optional point hook thread
+                             package)
   "Display INSPECTED-PARTS in a new inspector window.
 Optionally set point to POINT. If HOOK is provided, it is added to local
 KILL-BUFFER hooks for the inspector buffer."
@@ -6578,6 +6588,10 @@ KILL-BUFFER hooks for the inspector buffer."
     (when hook
       (add-hook 'kill-buffer-hook hook t t))
     (setq slime-buffer-connection (slime-current-connection))
+    (when thread
+      (setq slime-current-thread thread))
+    (when package
+      (setq slime-buffer-package package))
     (let ((inhibit-read-only t))
       (erase-buffer)
       (pop-to-buffer (current-buffer))
@@ -6668,13 +6682,8 @@ that value.
 2. If point is on an action then call that action.
 3. If point is on a range-button fetch and insert the range."
   (interactive)
-  (let ((opener (lexical-let ((point (slime-inspector-position)))
-                  (lambda (parts)
-                    (when parts
-                      (slime-open-inspector parts point)))))
-        (new-opener (lambda (parts)
-                      (when parts
-                        (slime-open-inspector parts)))))
+  (let ((opener (slime-make-inspector-opener (slime-inspector-position)))
+        (new-opener (slime-make-inspector-opener)))
     (destructuring-bind (property value)
         (slime-inspector-property-at-point)
         (case property
@@ -6825,9 +6834,7 @@ If ARG is negative, move forwards."
 (defun slime-inspector-toggle-verbose ()
   (interactive)
   (slime-eval-async `(swank:inspector-toggle-verbose)
-                    (lexical-let ((point (slime-inspector-position)))
-                      (lambda (parts)
-                        (slime-open-inspector parts point)))))
+                    (slime-make-inspector-opener (slime-inspector-position))))
 
 (defun slime-inspector-insert-more-button (index previous)
   (slime-insert-propertized 
