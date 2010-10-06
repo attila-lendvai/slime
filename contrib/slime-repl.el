@@ -329,8 +329,7 @@ Hint: You can use `display-buffer-reuse-frames' and
 `special-display-buffer-names' to customize the frame in which
 the buffer should appear."
   (interactive)
-  (slime-pop-to-buffer (slime-output-buffer))
-  (goto-char (point-max)))
+  (slime-pop-to-buffer (slime-output-buffer)))
 
 
 ;;;; REPL
@@ -511,7 +510,8 @@ joined together."))
 
 (defun slime-repl ()
   (interactive)
-  (slime-switch-to-output-buffer))
+  (slime-switch-to-output-buffer)
+  (goto-char (point-max)))
 
 (defun slime-repl-mode-beginning-of-defun (&optional arg)
   (if (and arg (< arg 0))
@@ -1571,7 +1571,7 @@ expansion will be added to the REPL's history.)"
    (interactive (list (or (get-text-property (point) 'slime-part-number)
                           (error "No part at point"))))
    (slime-repl-send-string (format "%s" `(swank:inspector-nth-part ,number)))
-   (slime-repl))
+   (slime-switch-to-output-buffer))
 
 (defun sldb-insert-frame-call-to-repl ()
   "Insert a call to a frame at point."
