@@ -3921,10 +3921,12 @@ alist but ignores CDRs."
 If there's no name at point, or a prefix argument is given, then the
 function name is prompted."
   (interactive)
-  (let ((name (cond ((not (called-interactively-p))
+  (let ((prompt (format "Edit definition of (in %s): "
+                        (slime-current-package)))
+        (name (cond ((not (called-interactively-p))
                      name)
                     (current-prefix-arg
-                     (slime-read-symbol-name "Edit Definition of: "))
+                     (slime-read-symbol-name prompt))
                     (t
                      (slime-symbol-at-point)))))
     ;; The hooks might search for a name in a different manner, so don't
@@ -3933,7 +3935,7 @@ function name is prompted."
                                           name where)
         (let ((name (or name
                         (if (called-interactively-p)
-                            (slime-read-symbol-name "Edit Definition of: ")
+                            (slime-read-symbol-name prompt)
                             name))))
           (slime-edit-definition-cont (slime-find-definitions name)
                                       name where)))))
@@ -4347,7 +4349,8 @@ Edit the value of a setf'able form in a new buffer.
 The value is inserted into a temporary buffer for editing and then set
 in Lisp when committed with \\[slime-edit-value-commit]."
   (interactive 
-   (list (slime-read-from-minibuffer "Edit value (evaluated): "
+   (list (slime-read-from-minibuffer (format "Edit value (evaluated in %s): "
+                                             (slime-current-package))
 				     (slime-sexp-at-point))))
   (slime-eval-async `(swank:value-for-editing ,form-string)
                     (lexical-let ((form-string form-string)
@@ -6021,7 +6024,8 @@ VAR should be a plist with the keys :name, :id, and :value."
 (defun sldb-inspect-in-frame (string)
   "Prompt for an expression and inspect it in the selected frame."
   (interactive (list (slime-read-from-minibuffer 
-                      "Inspect in frame (evaluated): " 
+                      (format "Inspect in frame (evaluated in %s): "
+                              (slime-current-package))
                       (slime-sexp-at-point))))
   (let ((number (sldb-frame-number-at-point)))
     (slime-eval-async `(swank:inspect-in-frame ,string ,number)
