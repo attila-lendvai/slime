@@ -659,13 +659,13 @@ The list of patterns is searched for a HEAD `eq' to the car of
 VALUE. If one is found, the BODY is executed with ARGS bound to the
 corresponding values in the CDR of VALUE."
   (let ((operator (cl-gensym "op-"))
-	(operands (cl-gensym "rand-"))
-	(tmp (cl-gensym "tmp-")))
+        (operands (cl-gensym "rand-"))
+        (tmp (cl-gensym "tmp-")))
     `(let* ((,tmp ,value)
-	    (,operator (car ,tmp))
-	    (,operands (cdr ,tmp)))
+            (,operator (car ,tmp))
+            (,operands (cdr ,tmp)))
        (cl-case ,operator
-	 ,@(mapcar (lambda (clause)
+         ,@(mapcar (lambda (clause)
                      (if (eq (car clause) t)
                          `(t ,@(cdr clause))
                        (cl-destructuring-bind ((op &rest rands) &rest body)
@@ -674,16 +674,16 @@ corresponding values in the CDR of VALUE."
                                  . ,(or body
                                         '((ignore)) ; suppress some warnings
                                         ))))))
-		   patterns)
-	 ,@(if (eq (caar (last patterns)) t)
-	       '()
-	     `((t (error "slime-dcase failed: %S" ,tmp))))))))
+                   patterns)
+         ,@(if (eq (caar (last patterns)) t)
+               '()
+             `((t (error "slime-dcase failed: %S" ,tmp))))))))
 
 (defmacro slime-define-keys (keymap &rest key-command)
   "Define keys in KEYMAP. Each KEY-COMMAND is a list of (KEY COMMAND)."
   (declare (indent 1))
   `(progn . ,(mapcar (lambda (k-c) `(define-key ,keymap . ,k-c))
-		     key-command)))
+                     key-command)))
 
 (cl-defmacro with-struct ((conc-name &rest slots) struct &body body)
   "Like with-slots but works only for structs.
@@ -757,7 +757,7 @@ It should be used for \"background\" messages such as argument lists."
     (completing-read prompt (slime-bogus-completion-alist
                              (slime-eval
                               `(swank:list-all-package-names t)))
-		     nil t initial-value)))
+                     nil t initial-value)))
 
 ;; Interface
 (defun slime-read-symbol-name (prompt &optional query)
@@ -777,7 +777,7 @@ positions before and after executing BODY."
   (let ((start (cl-gensym)))
     `(let ((,start (point)))
        (prog1 (progn ,@body)
-	 (add-text-properties ,start (point) ,props)))))
+         (add-text-properties ,start (point) ,props)))))
 
 (defun slime-add-face (face string)
   (declare (indent 1))
@@ -1361,9 +1361,9 @@ Return nil if the file doesn't exist or is empty; otherwise the
 first line of the file."
   (condition-case _err
       (with-temp-buffer
-	(insert-file-contents "~/.slime-secret")
-	(goto-char (point-min))
-	(buffer-substring (point-min) (line-end-position)))
+        (insert-file-contents "~/.slime-secret")
+        (goto-char (point-min))
+        (buffer-substring (point-min) (line-end-position)))
     (file-error nil)))
 
 ;;; Interface
@@ -2057,7 +2057,7 @@ or nil if nothing suitable can be found.")
   (when (null package) (setq package (slime-current-package)))
   (let* ((tag (cl-gensym (format "slime-result-%d-"
                                  (1+ (slime-continuation-counter)))))
-	 (slime-stack-eval-tags (cons tag slime-stack-eval-tags)))
+         (slime-stack-eval-tags (cons tag slime-stack-eval-tags)))
     (apply
      #'funcall
      (catch tag
@@ -2360,8 +2360,8 @@ Debugged requests are ignored."
 (defun slime-pprint-event (event buffer)
   "Pretty print EVENT in BUFFER with limited depth and width."
   (let ((print-length 20)
-	(print-level 6)
-	(pp-escape-newlines t))
+        (print-level 6)
+        (pp-escape-newlines t))
     (pp event buffer)))
 
 (defun slime-events-buffer ()
@@ -3567,8 +3567,10 @@ for the most recently enclosed macro or function."
                "2015-10-18")
 
 (defvar slime-minibuffer-map
-  (let ((map (make-sparse-keymap)))
-    (set-keymap-parent map minibuffer-local-map)
+  (let ((map (make-sparse-keymap))
+        (parent (copy-keymap minibuffer-local-map)))
+    (set-keymap-parent parent slime-editing-map)
+    (set-keymap-parent map parent)
     (define-key map "\t" #'completion-at-point)
     (define-key map "\M-\t" #'completion-at-point)
     map)
@@ -3596,7 +3598,7 @@ reading input.  The result is a string (\"\" if no input was given)."
   (let ((minibuffer-message-timeout 0)
         (minibuffer-setup-hook (slime-minibuffer-setup-hook)))
     (read-from-minibuffer prompt initial-value (or keymap slime-minibuffer-map)
-			  nil (or history 'slime-minibuffer-history))))
+                          nil (or history 'slime-minibuffer-history))))
 
 (defun slime-bogus-completion-alist (list)
   "Make an alist out of list.
@@ -4079,7 +4081,7 @@ in Lisp when committed with \\[slime-edit-value-commit]."
   (interactive
    (list (slime-read-from-minibuffer (format "Edit value (evaluated in %s): "
                                              (slime-current-package))
-				     (slime-sexp-at-point))))
+                                     (slime-sexp-at-point))))
   (slime-eval-async `(swank:value-for-editing ,form-string)
     (lexical-let ((form-string form-string)
                   (package (slime-current-package)))
@@ -4171,8 +4173,8 @@ in Lisp when committed with \\[slime-edit-value-commit]."
 (defun slime-load-file (filename)
   "Load the Lisp file FILENAME."
   (interactive (list
-		(read-file-name "Load file: " nil nil
-				nil (if (buffer-file-name)
+                (read-file-name "Load file: " nil nil
+                                nil (if (buffer-file-name)
                                         (file-name-nondirectory
                                          (buffer-file-name))))))
   (let ((lisp-filename (slime-to-lisp-filename (expand-file-name filename))))
@@ -5018,7 +5020,7 @@ argument is given, with CL:MACROEXPAND."
   "Return STRING propertised with face sldb-NAME-face."
   (declare (indent 1))
   (let ((facename (intern (format "sldb-%s-face" (symbol-name name))))
-	(var (cl-gensym "string")))
+        (var (cl-gensym "string")))
     `(let ((,var ,string))
        (slime-add-face ',facename ,var)
        ,var)))
@@ -5206,7 +5208,7 @@ CONTS is a list of pending Emacs continuations."
       (insert "\n" (sldb-in-face section "Backtrace:") "\n")
       (setq sldb-backtrace-start-marker (point-marker))
       (save-excursion
-        (if frames 
+        (if frames
             (sldb-insert-frames (sldb-prune-boring-frames frames) t)
           (insert "[No backtrace]")))
       (run-hooks 'sldb-hook)
@@ -5426,12 +5428,12 @@ Called on the `point-entered' text-property hook."
 (defun sldb-frame-number-at-point ()
   (let ((frame (get-text-property (point) 'frame)))
     (cond (frame (car frame))
-	  (t (error "No frame at point")))))
+          (t (error "No frame at point")))))
 
 (defun sldb-var-number-at-point ()
   (let ((var (get-text-property (point) 'var)))
     (cond (var var)
-	  (t (error "No variable at point")))))
+          (t (error "No variable at point")))))
 
 (defun sldb-previous-frame-number ()
   (save-excursion
@@ -5536,7 +5538,7 @@ This is 0 if START and END at the same line."
     (save-excursion
       (goto-char pos)
       (let ((fn (get-text-property (point) 'sldb-default-action)))
-	(if fn (funcall fn))))))
+        (if fn (funcall fn))))))
 
 (defun sldb-cycle ()
   "Cycle between restart list and backtrace."
@@ -5643,7 +5645,7 @@ Minimize point motion."
 (defun slime-highlight-sexp (&optional start end)
   "Highlight the first sexp after point."
   (let ((start (or start (point)))
-	(end (or end (save-excursion (ignore-errors (forward-sexp)) (point)))))
+        (end (or end (save-excursion (ignore-errors (forward-sexp)) (point)))))
     (slime-flash-region start end)))
 
 (defun slime-highlight-line (&optional timeout)
@@ -5662,7 +5664,7 @@ The details include local variable bindings and CATCH-tags."
   (let ((inhibit-read-only t)
         (inhibit-point-motion-hooks t))
     (if (or on (not (sldb-frame-details-visible-p)))
-	(sldb-show-frame-details)
+        (sldb-show-frame-details)
       (sldb-hide-frame-details))))
 
 (defun sldb-show-frame-details ()
@@ -5788,7 +5790,7 @@ VAR should be a plist with the keys :name, :id, and :value."
 (defun sldb-inspect-var ()
   (let ((frame (sldb-frame-number-at-point))
         (var (sldb-var-number-at-point)))
-    (slime-eval-async `(swank:inspect-frame-var ,frame ,var) 
+    (slime-eval-async `(swank:inspect-frame-var ,frame ,var)
                       (slime-make-inspector-opener))))
 
 (defun sldb-inspect-condition ()
@@ -6298,7 +6300,7 @@ was called originally."
   "Eval an expression and inspect the result."
   (interactive
    (list (slime-read-from-minibuffer "Inspect value (evaluated): "
-				     (slime-sexp-at-point))))
+                                     (slime-sexp-at-point))))
   (slime-eval-async `(swank:init-inspector ,string) 'slime-open-inspector))
 
 (define-derived-mode slime-inspector-mode fundamental-mode
@@ -6481,10 +6483,10 @@ that value.
   (interactive)
   (let ((result (slime-eval `(swank:inspector-next))))
     (cond (result
-	   (push (slime-inspector-position) slime-inspector-mark-stack)
-	   (slime-open-inspector result))
-	  (t (message "No next object")
-	     (ding)))))
+           (push (slime-inspector-position) slime-inspector-mark-stack)
+           (slime-open-inspector result))
+          (t (message "No next object")
+             (ding)))))
 
 (defun slime-inspector-quit ()
   "Quit the inspector and kill the buffer."
@@ -7204,9 +7206,9 @@ keys."
   (let ((alist '()))
     (dolist (e list)
       (let* ((k (funcall key e))
-	     (probe (cl-assoc k alist :test test)))
-	(if probe
-	    (push e (cdr probe))
+             (probe (cl-assoc k alist :test test)))
+        (if probe
+            (push e (cdr probe))
           (push (cons k (list e)) alist))))
     ;; Put them back in order.
     (cl-loop for (key . value) in (reverse alist)
@@ -7234,7 +7236,7 @@ keys."
   (let ((start (cl-position-if-not (lambda (x)
                                      (memq x '(?\t ?\n ?\s ?\r)))
                                    str))
-        
+
         (end (cl-position-if-not (lambda (x)
                                    (memq x '(?\t ?\n ?\s ?\r)))
                                  str
@@ -7265,7 +7267,7 @@ keys."
 (defun slime-cl-symbol-name (symbol)
   (let ((n (if (stringp symbol) symbol (symbol-name symbol))))
     (if (string-match ":\\([^:]*\\)$" n)
-	(let ((symbol-part (match-string 1 n)))
+        (let ((symbol-part (match-string 1 n)))
           (if (string-match "^|\\(.*\\)|$" symbol-part)
               (match-string 1 symbol-part)
             symbol-part))
@@ -7274,7 +7276,7 @@ keys."
 (defun slime-cl-symbol-package (symbol &optional default)
   (let ((n (if (stringp symbol) symbol (symbol-name symbol))))
     (if (string-match "^\\([^:]*\\):" n)
-	(match-string 1 n)
+        (match-string 1 n)
       default)))
 
 (defun slime-qualify-cl-symbol-name (symbol-or-name)
