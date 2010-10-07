@@ -1559,14 +1559,19 @@ Emacs buffer."
                     (write-string ,msg  s))))
               (t msg)))))
 
-(defun to-string (object)
+(defun to-string (object &key length-limit)
   "Write OBJECT in the *BUFFER-PACKAGE*.
 The result may not be readable. Handles problems with PRINT-OBJECT methods
 gracefully."
   (with-buffer-syntax ()
     (let ((*print-readably* nil))
       (without-printing-errors (:object object :stream nil)
-        (prin1-to-string object)))))
+        (if length-limit
+            (call/truncated-output-to-string
+             length-limit
+             (lambda (stream)
+               (prin1 object stream)))
+            (prin1-to-string object))))))
 
 (defun from-string (string)
   "Read string in the *BUFFER-PACKAGE*"
