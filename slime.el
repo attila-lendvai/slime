@@ -3674,8 +3674,10 @@ for the most recently enclosed macro or function."
              (slime-echo-arglist))))))
 
 (defvar slime-minibuffer-map
-  (let ((map (make-sparse-keymap)))
-    (set-keymap-parent map minibuffer-local-map)
+  (let ((map (make-sparse-keymap))
+        (parent (copy-keymap minibuffer-local-map)))
+    (set-keymap-parent parent slime-editing-map)
+    (set-keymap-parent map parent)
     (define-key map "\t" 'slime-complete-symbol)
     (define-key map "\M-\t" 'slime-complete-symbol)
     map)
