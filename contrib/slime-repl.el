@@ -872,6 +872,7 @@ used with a prefix argument (C-u), doesn't switch back afterwards."
 
 (defun slime-repl-replace-input (string)
   (slime-repl-delete-current-input)
+  (goto-char slime-repl-input-start-mark)
   (insert-and-inherit string))
 
 (defun slime-repl-input-line-beginning-position ()
