@@ -5317,8 +5317,8 @@ CONTS is a list of pending Emacs continuations."
       (insert "\n" (sldb-in-face section "Backtrace:") "\n")
       (setq sldb-backtrace-start-marker (point-marker))
       (save-excursion
-        (if frames
-            (sldb-insert-frames (sldb-prune-initial-frames frames) t)
+        (if frames 
+            (sldb-insert-frames (sldb-prune-boring-frames frames) t)
           (insert "[No backtrace]")))
       (run-hooks 'sldb-hook)
       (set-syntax-table lisp-mode-syntax-table))
@@ -5448,14 +5448,22 @@ RESTARTS should be a list ((NAME DESCRIPTION) ...)."
 (defun sldb-frame-restartable-p (frame)
   (and (plist-get (sldb-frame.plist frame) :restartable) t))
 
-(defun sldb-prune-initial-frames (frames)
-  "Return the prefix of FRAMES to initially present to the user.
-Regexp heuristics are used to avoid showing SWANK-internal frames."
-  (let* ((case-fold-search t)
-         (rx "^\\([() ]\\|lambda\\)*swank\\>"))
-    (or (cl-loop for frame in frames
-                 until (string-match rx (sldb-frame.string frame))
-                 collect frame)
+(defun sldb-prune-boring-frames (frames)
+  "Return the subsequence of FRAMES to initially present to the user.
+Regexp heuristics are used to avoid showing SWANK-internal frames
+both at the beginning and at the end of the backtrace."
+  (let ((case-fold-search t)
+        (swank-frame-regexp "^\\((*\\|lambda \\)*swank\\>"))
+    (or (cl-loop with winner = -1
+                 for frame in frames
+                 for idx from 0
+                 for frame-description = (sldb-frame.string frame)
+                 while (string-match swank-frame-regexp frame-description)
+                 do (setf winner idx)
+                 finally (return
+                           (cl-loop for frame in (subseq frames (1+ winner))
+                                    until (string-match swank-frame-regexp (sldb-frame.string frame))
+                                    collect frame)))
         frames)))
 
 (defun sldb-insert-frames (frames more)
