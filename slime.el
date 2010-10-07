@@ -6799,7 +6799,7 @@ DESCRIPTION is a one-line description of what the key selects.")
 (defvar slime-selector-other-window nil
   "If non-nil use switch-to-buffer-other-window.")
 
-(defun slime-selector (&optional other-window)
+(defun slime-selector (&optional key other-window preserve-window-config)
   "Select a new buffer by type, indicated by a single character.
 The user is prompted for a single character indicating the method by
 which to choose a new buffer. The `?' character describes the
@@ -6807,25 +6807,30 @@ available methods.
 
 See `def-slime-selector-method' for defining new methods."
   (interactive)
-  (message "Select [%s]: "
-           (apply #'string (mapcar #'car slime-selector-methods)))
+  (unless key
+    (message "Select [%s]: "
+             (apply #'string (mapcar #'car slime-selector-methods)))
+    (let ((sequence (save-window-excursion
+                      (select-window (minibuffer-window))
+                      (key-description (read-key-sequence nil)))))
+      (setf key (cond ((equal sequence "C-g")
+                      (keyboard-quit))
+                     ((equal sequence "TAB")
+                      ?i)
+                     ((= (length sequence) 1)
+                      (elt sequence 0))
+                     ((= (length sequence) 3)
+                      (elt sequence 2))))))
   (let* ((slime-selector-other-window other-window)
-         (sequence (save-window-excursion
-                    (select-window (minibuffer-window))
-                    (key-description (read-key-sequence nil))))
-         (ch (cond ((equal sequence "C-g")
-                    (keyboard-quit))
-                   ((equal sequence "TAB")
-                    ?i)
-                   ((= (length sequence) 1)
-                    (elt sequence 0))
-                   ((= (length sequence) 3)
-                    (elt sequence 2))))
-         (method (cl-find ch slime-selector-methods :key #'car)))
+         (method (cl-find key slime-selector-methods :key #'car)))
     (cond (method
-           (funcall (cl-third method)))
+           (let ((config (current-window-configuration)))
+             (prog1
+                 (funcall (cl-third method))
+               (when preserve-window-config
+                 (set-window-configuration config)))))
           (t
-           (message "No method for character: ?\\%c" ch)
+           (message "No method for character: ?\\%c" key)
            (ding)
            (sleep-for 1)
            (discard-input)
@@ -6870,7 +6875,7 @@ switch-to-buffer."
   (slime-selector)
   (current-buffer))
 
-(cl-pushnew (list ?4 "Select in other window" (lambda () (slime-selector t)))
+(cl-pushnew (list ?4 "Select in other window" (lambda () (slime-selector nil t)))
             slime-selector-methods :key #'car)
 
 (def-slime-selector-method ?q "Abort."
