@@ -5221,7 +5221,7 @@ Full list of commands:
     (eval `(defun ,fname ()
              ,docstring
              (interactive)
-             (sldb-invoke-restart ,number)))
+             (sldb-invoke-restart (- (length sldb-restarts) ,number 1))))
     (define-key sldb-mode-map (number-to-string number) fname)))
 
 
@@ -5418,12 +5418,13 @@ RESTARTS should be a list ((NAME DESCRIPTION) ...)."
                         maximize (length name))
              for (name string) in (cl-subseq restarts start end)
              for number from start
+             for i downfrom (- len start 1)
              do (slime-insert-propertized
                  `(,@nil restart ,number
                          sldb-default-action sldb-invoke-restart
                          mouse-face highlight)
-                 " " (sldb-in-face restart-number (number-to-string number))
-                 ": ["  (sldb-in-face restart-type name) "] "
+                 " " (sldb-in-face restart-number (number-to-string i))
+                 ": "  (sldb-in-face restart-type name) " "
                  (make-string (- longest-restart-name-length
                                  (length name))
                               ?\ )
