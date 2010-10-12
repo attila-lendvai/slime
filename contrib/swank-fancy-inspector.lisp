@@ -9,6 +9,77 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (swank-require :swank-util))
 
+(defvar *inspector-lookup-hooks* '(default-inspector-lookup-hook)
+  "A list of funcallables of one argument that provide various user defined definitions when inspecting in DWIM mode.")
+
+(defun default-inspector-lookup-hook (form)
+  (let ((result '())
+        (valid-function-name-p (valid-function-name-p form)))
+    (when (and (symbolp form)
+               (boundp form)
+               (not (keywordp form)))
+      (push (symbol-value form) result))
+    (when (and valid-function-name-p
+               (fboundp form))
+      (push (fdefinition form) result))
+    (when (and (symbolp form)
+               (find-class form nil))
+      (push (find-class form) result))
+    (when (and (and (consp form)
+                    (not valid-function-name-p))
+               (valid-function-name-p (first form))
+               (fboundp (first form)))
+      (push (eval form) result))
+    (when (and (or (symbolp form)
+                   (stringp form))
+               (find-package form))
+      (push (find-package form) result))
+    (values result (not (null result)))))
+
+;; redefine the original
+(defslimefun init-inspector (string &key (reset t) (mode :eval))
+  (check-type mode (member :as-is :eval :dwim))
+  (with-buffer-syntax ()
+    (with-retry-restart (:msg "Retry SLIME inspection request.")
+      (when reset
+        (reset-inspector))
+      (let* ((dwim-mode? (eq mode :dwim))
+             (form (block reading
+                     (handler-bind
+                         ((error (lambda (e)
+                                   (declare (ignore e))
+                                   (when dwim-mode?
+                                     (return-from reading 'nothing)))))
+                       (read-from-string string nil 'nothing))))
+             (value nil))
+        (unless (eq form 'nothing)
+          (setf value (ecase mode
+                        (:dwim
+                         (let ((things (loop
+                                          :for hook :in *inspector-lookup-hooks*
+                                          :for (result foundp) = (multiple-value-list
+                                                                  (funcall hook form))
+                                          :when foundp
+                                          :append (if (consp result)
+                                                      result
+                                                      (list result)))))
+                           (if (rest things)
+                               things
+                               (first things))))
+                        (:eval (eval form))
+                        (:as-is form)))
+          (when (and dwim-mode?
+                     form
+                     value)
+            ;; we've got a dwim match, so push the form to the
+            ;; inspector stack, so you can go back to it with
+            ;; slime-inspector-pop (bound to the key 'l') in the rare
+            ;; cases when dwim misses the intention
+            (inspect-object form))
+          (inspect-object (if dwim-mode?
+                              (or value form)
+                              value)))))))
+
 (defmethod emacs-inspect ((symbol symbol))
   (let ((package (symbol-package symbol)))
     (multiple-value-bind (_symbol status)
