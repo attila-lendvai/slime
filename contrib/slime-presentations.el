@@ -720,6 +720,7 @@ output; otherwise the new input is appended."
 (defun slime-presentation-init-keymaps ()
   (slime-init-keymap 'slime-presentation-command-map nil t
 		     slime-presentation-bindings)
+  (define-key sldb-mode-map (kbd "M-RET") 'slime-copy-presentation-at-point-to-repl)
   (define-key slime-presentation-command-map "\M-o" 'slime-clear-presentations)
   ;; C-c C-v is the prefix for the presentation-command map.
   (define-key slime-prefix-map "\C-v" slime-presentation-command-map))
