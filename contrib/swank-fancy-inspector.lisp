@@ -472,15 +472,15 @@ See `methods-by-applicability'.")
                        ,slot-name)
       collect (padding-for slot-name)
       collect " = "
-      collect (slot-value-for-inspector class object effective-slot)
+      appending (slot-value-for-inspector class object effective-slot)
       collect '(:newline))))
 
 (defgeneric slot-value-for-inspector (class object slot)
   (:method (class object slot)
     (let ((boundp (swank-mop:slot-boundp-using-class class object slot)))
       (if boundp
-          `(:value ,(swank-mop:slot-value-using-class class object slot))
-          "#<unbound>"))))
+          `((:value ,(swank-mop:slot-value-using-class class object slot)))
+          '("#<unbound>")))))
 
 (defun slot-home-class-using-class (slot class)
   (let ((slot-name (swank-mop:slot-definition-name slot)))
