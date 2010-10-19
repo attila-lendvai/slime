@@ -6623,17 +6623,23 @@ KILL-BUFFER hooks for the inspector buffer."
     (let ((inhibit-read-only t))
       (erase-buffer)
       (pop-to-buffer (current-buffer))
-      (cl-destructuring-bind (&key id title content) inspected-parts
+      (cl-destructuring-bind (&key title type content id type-id) inspected-parts
         (cl-macrolet ((fontify (face string)
-                               `(slime-inspector-fontify ,face ,string)))
-          (slime-propertize-region
-              (list 'slime-part-number id
-                    'mouse-face 'highlight
-                    'face 'slime-inspector-value-face)
-            (insert title))
-          (while (eq (char-before) ?\n)
-            (backward-delete-char 1))
-          (insert "\n" (fontify label "--------------------") "\n")
+                        `(slime-inspector-fontify ,face ,string)))
+          (when title
+            (slime-propertize-region (list 'slime-part-number id
+                                           'mouse-face 'highlight
+                                           'face 'slime-inspector-value-face)
+              (insert title)))
+          (when type
+            (insert (fontify label " of type "))
+            (slime-propertize-region (list 'slime-part-number type-id
+                                           'mouse-face 'highlight
+                                           'face 'slime-inspector-type-face)
+              (insert type)))
+          (when (or title type)
+            (newline)
+            (newline))
           (save-excursion
             (slime-inspector-insert-content content))
           (when point
