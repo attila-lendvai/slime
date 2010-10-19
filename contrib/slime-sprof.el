@@ -62,14 +62,14 @@
   (with-current-buffer (slime-buffer-name :sprof)
     (let ((inhibit-read-only t))
       (erase-buffer)
-      (insert (format "%4s %-54s %6s %6s %6s\n"
+      (insert (format "%4s %-104s %6s %6s %6s\n"
                       "Rank"
                       "Name"
                       "Self%"
                       "Cumul%"
                       "Total%"))
       (dolist (data graph)
-        (slime-sprof-browser-insert-line data 54))))
+        (slime-sprof-browser-insert-line data 104))))
   (forward-line 2))
 
 (cl-defun slime-sprof-update (&optional (exclude-swank slime-sprof-exclude-swank))
@@ -166,7 +166,7 @@
           (insert (format (format "\n%%%ds" (+ 7 (* 2 nesting))) ""))
           (slime-insert-propertized
            (slime-sprof-browser-name-properties)
-           (let ((len (- 59 (* 2 nesting))))
+           (let ((len (- 109 (* 2 nesting))))
              (format (format "%%-%ds " len)
                      (slime-sprof-abbreviate-name name len))))
           (slime-sprof-browser-add-line-text-properties
