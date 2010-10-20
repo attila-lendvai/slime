@@ -392,10 +392,14 @@ See `methods-by-applicability'.")
 (defvar *inspector-slots-default-grouping* :all
   "Accepted values: :inheritance and :all")
 
+(defvar *skip-slot-value-errors-while-inspecting* nil)
+
 (defgeneric all-slots-for-inspector (object))
 
 (defmethod all-slots-for-inspector ((object standard-object))
-  (let* ((class           (class-of object))
+  (let* ((*skip-slot-value-errors-while-inspecting*
+          *skip-slot-value-errors-while-inspecting*)
+         (class           (class-of object))
          (direct-slots    (swank-mop:class-direct-slots class))
          (effective-slots (swank-mop:class-slots class))
          (longest-slot-name-length
@@ -538,7 +542,26 @@ See `methods-by-applicability'.")
     (let ((boundp (swank-mop:slot-boundp-using-class class object slot)))
       (if boundp
           `((:value ,(swank-mop:slot-value-using-class class object slot)))
-          '("#<unbound>")))))
+          '("#<unbound>"))))
+  (:method :around (class object slot)
+    (flet ((skip ()
+             (return-from slot-value-for-inspector '("#<svuc skipped>"))))
+      (restart-case
+          (handler-bind
+              ((serious-condition (lambda (error)
+                                    (declare (ignore error))
+                                    (when *skip-slot-value-errors-while-inspecting*
+                                      (skip)))))
+            (call-next-method))
+        (continue ()
+          :report (lambda (stream)
+                    (format stream "Skip inspecting slot value of ~S" (swank-mop:slot-definition-name slot)))
+          (skip))
+        (ignore-slot-value-errors ()
+          :report (lambda (stream)
+                    (format stream "Skip inspecting all slots that have error in their SVUC"))
+          (setf *skip-slot-value-errors-while-inspecting* t)
+          (skip))))))
 
 (defun slot-home-class-using-class (slot class)
   (let ((slot-name (swank-mop:slot-definition-name slot)))
