@@ -704,27 +704,17 @@ See `methods-by-applicability'.")
     ,@(all-slots-for-inspector class)))
 
 (defmethod emacs-inspect ((slot swank-mop:standard-slot-definition))
-  `("Name: "
-    (:value ,(swank-mop:slot-definition-name slot))
-    (:newline)
-    ,@(when (swank-mop:slot-definition-documentation slot)
-        `("Documentation:" (:newline)
-                           (:value ,(swank-mop:slot-definition-documentation
-                                     slot))
-                           (:newline)))
-    "Init args: "
-    (:value ,(swank-mop:slot-definition-initargs slot))
-    (:newline)
-    "Init form: "
-    ,(if (swank-mop:slot-definition-initfunction slot)
-         `(:value ,(swank-mop:slot-definition-initform slot))
-         "#<unspecified>")
-    (:newline)
-    "Init function: "
-    (:value ,(swank-mop:slot-definition-initfunction slot))
-    (:newline)
-    ,@(all-slots-for-inspector slot)))
-
+  (list
+   :title "A slot"
+   :content
+   (append
+    (label-value-line*
+     ("Name"          (swank-mop:slot-definition-name slot))
+     ("Documentation" (swank-mop:slot-definition-documentation slot))
+     ("Initargs"      (swank-mop:slot-definition-initargs slot))
+     ("Initform"      (swank-mop:slot-definition-initform slot))
+     ("Initfunction"  (swank-mop:slot-definition-initfunction slot)))
+    (all-slots-for-inspector slot))))
 
 ;; Wrapper structure over the list of symbols of a package that should
 ;; be displayed with their respective classification flags. This is
