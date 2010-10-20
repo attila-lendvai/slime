@@ -136,7 +136,7 @@
            (:newline)
            (:newline)))
         ;;
-	(when (boundp symbol)
+        (when (boundp symbol)
           (append
            (label-value-line (if (constantp symbol)
                                  "It is a constant of value"
@@ -147,7 +147,7 @@
            ;; implementations usually provide a restart.
            `(" " (:action "[makunbound]" ,(lambda () (makunbound symbol)))
              (:newline))))
-	(docstring-ispec symbol :kind 'variable)
+        (docstring-ispec symbol :kind 'variable)
         (multiple-value-bind (expansion definedp) (macroexpand symbol)
           (if definedp
               (label-value-line "It is a symbol macro with expansion"
@@ -163,7 +163,7 @@
                     `(" " (:action "[unbind]"
                                    ,(lambda () (fmakunbound symbol))))
                     `((:newline))))
-	(docstring-ispec symbol :label "Function Documentation" :kind 'function)
+        (docstring-ispec symbol :label "Function Documentation" :kind 'function)
 
         ;;
         ;; Compiler macro
@@ -1055,26 +1055,44 @@ SPECIAL-OPERATOR groups."
                                                               zone))))))
 
 (defmethod emacs-inspect ((i integer))
-  (append
-   `(,(format nil "Value: ~D = #x~8,'0X = #o~O = #b~,,' ,8:B~@[ = ~E~]"
-	      i i i i (ignore-errors (coerce i 'float)))
-     (:newline))
-   (when (< -1 i char-code-limit)
-     (label-value-line "Code-char" (code-char i)))
-   (label-value-line "Integer-length" (integer-length i))
-   (ignore-errors
-    (label-value-line "Universal-time" (format-iso8601-time i t)))))
+  (list
+   :title "An integer"
+   :content
+   (flet ((value-part-coerced-to (type)
+            (let ((value (ignore-errors (coerce i type))))
+              (if value
+                  (format nil "~E" value)
+                  "<not representable>"))))
+     (label-value-line*
+      ("Decimal" (princ-to-string i) :splice-as-ispec t)
+      ("Hexadecimal" (format nil "#x~8,'0X" i) :splice-as-ispec t)
+      ("Octal" (format nil "#o~O" i) :splice-as-ispec t)
+      ("Binary" (format nil "#b~,,' ,8:B" i) :splice-as-ispec t)
+      ("As float" (value-part-coerced-to 'float) :splice-as-ispec t)
+      ("As double-float" (value-part-coerced-to 'double-float) :splice-as-ispec t)
+      (@ '((:newline)))
+      ("Integer-length" (princ-to-string (integer-length i)) :splice-as-ispec t)
+      (@ (when (< 0 i (expt 2 32))
+           (label-value-line "Universal-time" (format-iso8601-time i t))))
+      (@ (when (< -1 i char-code-limit)
+           `((:label "Code-char: ") ,(let ((*print-readably*)) (prin1-to-string (code-char i))))))))))
 
 (defmethod emacs-inspect ((c complex))
-  (label-value-line*
-   ("Real part" (realpart c))
-   ("Imaginary part" (imagpart c))))
+  (list
+   :title "A complex number"
+   :content
+   (label-value-line*
+    ("Real part" (realpart c))
+    ("Imaginary part" (imagpart c)))))
 
 (defmethod emacs-inspect ((r ratio))
-  (label-value-line*
-   ("Numerator" (numerator r))
-   ("Denominator" (denominator r))
-   ("As float" (float r))))
+  (list
+   :title "A non-integer ratio"
+   :content
+   (label-value-line*
+    ("Numerator" (princ-to-string (numerator r)) :splice-as-ispec t)
+    ("Denominator" (princ-to-string (denominator r)) :splice-as-ispec t)
+    ("As float" (float r)))))
 
 (defmethod emacs-inspect ((f float))
   (cond
@@ -1084,15 +1102,11 @@ SPECIAL-OPERATOR groups."
      (list "Not a Number."))
     ((not (float-infinity-p f))
      (multiple-value-bind (significand exponent sign) (decode-float f)
-       (append
-	`("Scientific: " ,(format nil "~E" f) (:newline)
-			 "Decoded: "
-			 (:value ,sign) " * "
-			 (:value ,significand) " * "
-			 (:value ,(float-radix f)) "^"
-			 (:value ,exponent) (:newline))
-	(label-value-line "Digits" (float-digits f))
-	(label-value-line "Precision" (float-precision f)))))
+        (label-value-line*
+         ("Scientific" (format nil "~E" f) :splice-as-ispec t)
+         ("Decoded" (format nil "~A * ~A * ~A^~A" sign significand (float-radix f) exponent) :splice-as-ispec t)
+         ("Digits" (princ-to-string (float-digits f)) :splice-as-ispec t)
+         ("Precision" (princ-to-string (float-precision f)) :splice-as-ispec t))))
     ((> f 0)
      (list "Positive infinity."))
     ((< f 0)
