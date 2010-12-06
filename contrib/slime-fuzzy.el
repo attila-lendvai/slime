@@ -1,3 +1,4 @@
+(defvar slime-fuzzy-init-undo-stack nil)
 
 (define-slime-contrib slime-fuzzy
   "Fuzzy symbol completion."
@@ -7,10 +8,18 @@
   (:license "GPL")
   (:swank-dependencies swank-fuzzy)
   (:on-load
+   (push
+    `(progn
+       (setq slime-complete-symbol-function ',slime-complete-symbol-function))
+    slime-fuzzy-init-undo-stack)
+   (setq slime-complete-symbol-function 'slime-fuzzy-complete-symbol)
    (define-key slime-mode-map "\C-c\M-i" 'slime-fuzzy-complete-symbol)
    (when (featurep 'slime-repl)
      (define-key slime-repl-mode-map "\C-c\M-i"
-       'slime-fuzzy-complete-symbol))))
+       'slime-fuzzy-complete-symbol)))
+  (:on-unload
+   (while slime-fuzzy-init-undo-stack
+     (eval (pop slime-fuzzy-init-undo-stack)))))
 
 (defcustom slime-fuzzy-completion-in-place t
   "When non-NIL the fuzzy symbol completion is done in place as
