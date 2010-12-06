@@ -218,10 +218,10 @@ The default is nil, as this feature can be a security risk."
 (defvar slime-connect-port-history (list (prin1-to-string slime-port)))
 
 (defvar slime-net-valid-coding-systems
-  '((iso-latin-1-unix nil "iso-latin-1-unix")
+  '((utf-8-unix       t   "utf-8-unix")
+    (iso-latin-1-unix nil "iso-latin-1-unix")
     (iso-8859-1-unix  nil "iso-latin-1-unix")
     (binary           nil "iso-latin-1-unix")
-    (utf-8-unix       t   "utf-8-unix")
     (emacs-mule-unix  t   "emacs-mule-unix")
     (euc-jp-unix      t   "euc-jp-unix"))
   "A list of valid coding systems.
