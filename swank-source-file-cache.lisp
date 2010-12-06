@@ -79,6 +79,7 @@ Return NIL if the right version cannot be found."
   "Return the entire contents of FILENAME as a string."
   (with-open-file (s filename :direction :input
 		     :external-format (or (guess-external-format filename)
+					  (find-external-format "utf-8")
 					  (find-external-format "latin-1")
 					  :default))
     (let* ((string (make-string (file-length s)))

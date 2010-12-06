@@ -681,7 +681,8 @@ e.g. \"latin-1-unix\"."
 Return nil if the file contains no special markers."
   ;; Look for a Emacs-style -*- coding: ... -*- or Local Variable: section.
   (with-open-file (s pathname :if-does-not-exist nil
-                     :external-format (or (find-external-format "latin-1-unix")
+                     :external-format (or (find-external-format "utf-8")
+                                          (find-external-format "latin-1-unix")
                                           :default))
     (if s 
         (or (let* ((line (read-line s nil))
