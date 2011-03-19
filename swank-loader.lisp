@@ -141,12 +141,22 @@ Return nil if nothing appropriate is available."
     (and s (symbol-name (read s)))))
 
 (defun default-fasl-dir ()
-  (merge-pathnames
-   (make-pathname
-    :directory `(:relative ".slime" "fasl"
-                 ,@(if (slime-version-string) (list (slime-version-string)))
-                 ,(unique-dir-name)))
-   (user-homedir-pathname)))
+  (or
+   ;; If ASDF is available then store Slime's fasl's where ASDF stores them.
+   (let ((translate-fn (and (find-package :asdf)
+                            (find-symbol "COMPILE-FILE-PATHNAME*" :asdf))))
+     (when translate-fn
+       (make-pathname
+        :name nil :type nil
+        :defaults (funcall translate-fn
+                           (make-pathname :name "foo"
+                                          :defaults *source-directory*)))))
+   (merge-pathnames
+    (make-pathname
+     :directory `(:relative ".slime" "fasl"
+                            ,@(if (slime-version-string) (list (slime-version-string)))
+                            ,(unique-dir-name)))
+    (user-homedir-pathname))))
 
 (defvar *fasl-directory* (default-fasl-dir)
   "The directory where fasl files should be placed.")
