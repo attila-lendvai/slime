@@ -180,7 +180,7 @@
         (format nil "It names a ~@[primitive~* ~]type-specifier."
                 (eq kind :primitive))
         '(:newline))
-       (docstring-ispec "Type-specifier documentation" symbol 'type)
+       (docstring-ispec  symbol :label "Type-specifier documentation" :kind 'type)
        (unless (eq t fun)
          (append
           `("Type-specifier lambda-list: "
@@ -196,15 +196,16 @@
               (list "Type-specifier expansion: "
                     (princ-to-string expansion))))))))))
 
-(defun docstring-ispec (label object kind)
+(defun docstring-ispec (object &key (label "Documentation") (kind t))
   "Return a inspector spec if OBJECT has a docstring of of kind KIND."
-  (let ((docstring (documentation object kind)))
+  (let ((docstring (documentation object kind))
+        (label-ispec `(:label ,(concatenate 'string (string label) ": "))))
     (cond ((not docstring) nil)
-          ((< (+ (length label) (length docstring))
-              75)
-           (list label ": " docstring '(:newline)))
+          ((and (< (+ (length label) (length docstring) 2) (or *print-right-margin* 75))
+                (not (find #\Newline docstring)))
+           `(,label-ispec ,docstring (:newline)))
           (t
-           (list label ":" '(:newline) "  " docstring '(:newline))))))
+           `(,label-ispec (:newline) "  " ,docstring (:newline))))))
 
 (unless (find-method #'emacs-inspect '() (list (find-class 'function)) nil)
   (defmethod emacs-inspect ((f function))
@@ -215,7 +216,7 @@
    (label-value-line "Name" (function-name f))
    `("Its argument list is: "
      ,(inspector-princ (arglist f)) (:newline))
-   (docstring-ispec "Documentation" f t)
+   (docstring-ispec f)
    (if (function-lambda-expression f)
        (label-value-line "Lambda Expression"
                          (function-lambda-expression f)))))
@@ -506,7 +507,7 @@ See `methods-by-applicability'.")
     (append
       (lv "Name" (swank-mop:generic-function-name gf))
       (lv "Arguments" (swank-mop:generic-function-lambda-list gf))
-      (docstring-ispec "Documentation" gf t)
+      (docstring-ispec gf)
       (lv "Method class" (swank-mop:generic-function-method-class gf))
       (lv "Method combination"
           (swank-mop:generic-function-method-combination gf))
@@ -533,7 +534,7 @@ See `methods-by-applicability'.")
                        (swank-mop:method-generic-function method)))))
           '("Method without a generic function"))
       (:newline)
-      ,@(docstring-ispec "Documentation" method t)
+      ,@(docstring-ispec method)
       "Lambda List: " (:value ,(swank-mop:method-lambda-list method))
       (:newline)
       "Specializers: " (:value ,(swank-mop:method-specializers method)
