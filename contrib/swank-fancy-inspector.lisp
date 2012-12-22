@@ -114,23 +114,40 @@
     (multiple-value-bind (_symbol status)
         (and package (find-symbol (string symbol) package))
       (declare (ignore _symbol))
-      (append
-        (label-value-line "Its name is" (symbol-name symbol))
+      (list
+       :title (concatenate 'string "A symbol: "
+                           (when package
+                             (package-name package))
+                           (when package
+                             (ecase status
+                               (:external ":")
+                               (:internal "::")))
+                           (symbol-name symbol))
+       :type nil
+       :content
+       (append
+        (append
+         (when (eq status :internal)
+           `((:action "[export it]"
+              ,(lambda () (export symbol package)))
+             (:newline)))
+         `((:action "[unintern it]"
+            ,(lambda () (unintern symbol package)))
+           (:newline)
+           (:newline)))
         ;;
-        ;; Value
-        (cond ((boundp symbol)
-               (append
-                (label-value-line (if (constantp symbol)
-                                      "It is a constant of value"
-                                      "It is a global variable bound to")
-                                  (symbol-value symbol) :newline nil)
-                ;; unbinding constants might be not a good idea, but
-                ;; implementations usually provide a restart.
-                `(" " (:action "[unbind]"
-                               ,(lambda () (makunbound symbol))))
-                '((:newline))))
-              (t '("It is unbound." (:newline))))
-        (docstring-ispec "Documentation" symbol 'variable)
+	(when (boundp symbol)
+          (append
+           (label-value-line (if (constantp symbol)
+                                 "It is a constant of value"
+                                 "It is a global variable bound to")
+                             (symbol-value symbol)
+                             :display-nil-value t :newline nil)
+           ;; unbinding constants might be not a good idea, but
+           ;; implementations usually provide a restart.
+           `(" " (:action "[makunbound]" ,(lambda () (makunbound symbol)))
+             (:newline))))
+	(docstring-ispec symbol :kind 'variable)
         (multiple-value-bind (expansion definedp) (macroexpand symbol)
           (if definedp
               (label-value-line "It is a symbol macro with expansion"
@@ -139,25 +156,27 @@
         ;; Function
         (if (fboundp symbol)
             (append (if (macro-function symbol)
-                        `("It a macro with macro-function: "
+                        `((:label "It names a macro with macro-function: ")
                           (:value ,(macro-function symbol)))
-                        `("It is a function: "
+                        `((:label "It names a function: ")
                           (:value ,(symbol-function symbol))))
                     `(" " (:action "[unbind]"
                                    ,(lambda () (fmakunbound symbol))))
-                    `((:newline)))
-            `("It has no function value." (:newline)))
-        (docstring-ispec "Function documentation" symbol 'function)
+                    `((:newline))))
+	(docstring-ispec symbol :label "Function Documentation" :kind 'function)
+
+        ;;
+        ;; Compiler macro
         (when (compiler-macro-function symbol)
-            (append
-             (label-value-line "It also names the compiler macro"
-                               (compiler-macro-function symbol) :newline nil)
-             `(" " (:action "[remove]"
-                            ,(lambda ()
-                               (setf (compiler-macro-function symbol) nil)))
-                   (:newline))))
-        (docstring-ispec "Compiler macro documentation"
-                         symbol 'compiler-macro)
+          (append
+           (label-value-line "It also names the compiler macro"
+                             (compiler-macro-function symbol) :newline nil)
+           `(" " (:action "[remove]"
+                          ,(lambda ()
+                              (setf (compiler-macro-function symbol) nil)))
+                 (:newline))))
+        (docstring-ispec symbol :label "Compiler Macro Documentation" :kind 'compiler-macro)
+
         ;;
         ;; Package
         (if package
@@ -175,11 +194,11 @@
             '("It is a non-interned symbol." (:newline)))
         ;;
         ;; Plist
-        (label-value-line "Property list" (symbol-plist symbol))
+        (label-value-line "Property list" (symbol-plist symbol) :hide-when-nil t)
         ;;
         ;; Class
         (if (find-class symbol nil)
-            `("It names the class "
+            `((:label "It names the class ")
               (:value ,(find-class symbol) ,(string symbol))
               " "
               (:action "[remove]"
@@ -188,8 +207,12 @@
         ;;
         ;; More package
         (if (find-package symbol)
-            (label-value-line "It names the package" (find-package symbol)))
-        (inspect-type-specifier symbol)))))
+            (append
+             (label-value-line "It names the package" (find-package symbol)
+                               :newline nil)
+             `(" " (:action "[delete package]"
+                            ,(lambda () (delete-package symbol))))))
+        (inspect-type-specifier symbol))))))
 
 #-sbcl
 (defun inspect-type-specifier (symbol)
