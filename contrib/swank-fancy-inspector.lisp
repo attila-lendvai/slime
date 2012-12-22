@@ -80,6 +80,35 @@
                               (or value form)
                               value)))))))
 
+(defmacro set-value-inspector-action ((var) &body body)
+  `(lambda ()
+     (with-simple-restart
+         (abort "Abort setting value")
+       (let ((value-string (eval-in-emacs
+                            `(condition-case c
+                                 (slime-read-from-minibuffer (format "Set to (evaluated in %s): "
+                                                                     (slime-current-package)))
+                               (quit nil)))))
+         (unless (equal value-string "")
+           (let ((,var (eval (read-from-string value-string))))
+             ,@body))))))
+
+;; redefine the original
+(defun inspect-cons (cons)
+  (list
+   :title "A cons cell"
+   :type nil
+   :content (append
+             `("(" (:value ,(car cons)) " . " (:value ,(cdr cons)) ")")
+             `((:newline))
+             `((:action "[set car]"
+               ,(set-value-inspector-action (value)
+                  (setf (car cons) value)))
+               (:newline)
+               (:action "[set cdr]"
+                 ,(set-value-inspector-action (value)
+                    (setf (cdr cons) value)))))))
+
 (defmethod emacs-inspect ((symbol symbol))
   (let ((package (symbol-package symbol)))
     (multiple-value-bind (_symbol status)
