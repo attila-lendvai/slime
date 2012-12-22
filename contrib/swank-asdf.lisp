@@ -13,6 +13,13 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (require :asdf))
 
+(defun find-swank-asdf-system (system-name)
+  (let ((system-name (asdf::coerce-name system-name)))
+    (when (equalp system-name "swank")
+      (merge-pathnames "swank.asd" swank-loader:*source-directory*))))
+
+(pushnew 'find-swank-asdf-system asdf:*system-definition-search-functions*)
+
 (defun find-operation (operation)
   (or (find-symbol (symbol-name operation) :asdf)
       (error "Couldn't find ASDF operation ~S" operation)))
