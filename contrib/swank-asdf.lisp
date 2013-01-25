@@ -531,6 +531,13 @@ already knows."
 
 (pushnew 'try-compile-asd-file *compile-file-for-emacs-hook*)
 
+(defun find-swank-asdf-system (system-name)
+  (let ((system-name (asdf::coerce-name system-name)))
+    (when (equalp system-name "swank")
+      (merge-pathnames "swank.asd" swank-loader:*source-directory*))))
+
+(pushnew 'find-swank-asdf-system asdf:*system-definition-search-functions*)
+
 ;;; (pushnew 'try-compile-file-with-asdf *compile-file-for-emacs-hook*)
 
 (provide :swank-asdf)
