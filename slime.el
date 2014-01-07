@@ -6879,7 +6879,9 @@ is setup, unless the user already set one explicitly."
       ;; in the attempt to load modules concurrently which may not be
       ;; supported by the host Lisp.
       (setf (slime-lisp-modules)
-            (slime-eval `(swank:swank-require ',needed))))))
+            (slime-eval `(cl:dolist (module ',needed)
+                           (cl:with-simple-restart (cl:continue "Skip loading Swank module ~S" module)
+                             (swank:swank-require module))))))))
 
 (cl-defstruct slime-contrib
   name
