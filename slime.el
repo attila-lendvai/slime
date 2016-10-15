@@ -3568,8 +3568,10 @@ for the most recently enclosed macro or function."
                "2015-10-18")
 
 (defvar slime-minibuffer-map
-  (let ((map (make-sparse-keymap)))
-    (set-keymap-parent map minibuffer-local-map)
+  (let ((map (make-sparse-keymap))
+        (parent (copy-keymap minibuffer-local-map)))
+    (set-keymap-parent parent slime-editing-map)
+    (set-keymap-parent map parent)
     (define-key map "\t" #'completion-at-point)
     (define-key map "\M-\t" #'completion-at-point)
     map)
