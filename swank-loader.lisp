@@ -160,6 +160,10 @@ Return nil if nothing appropriate is available."
 
 (defun binary-pathname (src-pathname binary-dir)
   "Return the pathname where SRC-PATHNAME's binary should be compiled."
+  (declare (ignore binary-dir))
+  #+asdf
+  (asdf:apply-output-translations src-pathname)
+  #-asdf
   (let ((cfp (compile-file-pathname src-pathname)))
     (merge-pathnames (make-pathname :name (pathname-name cfp)
                                     :type (pathname-type cfp))
